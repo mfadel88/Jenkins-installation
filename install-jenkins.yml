@@ -1,0 +1,6 @@
+---
+- name: Install Jenkins on Red Hat
+  hosts: jenkins
+  become: true
+  roles:
+    - jenkins

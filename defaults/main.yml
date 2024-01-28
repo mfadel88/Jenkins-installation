@@ -1,0 +1,9 @@
+---
+# defaults file for jenkins
+# defaults file for jenkins_custom_install
+
+# Jenkins installation directory
+jenkins_install_dir: /server/jenkins
+
+# Jenkins home directory
+jenkins_home_dir: /var/lib/jenkins

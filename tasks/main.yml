@@ -1,0 +1,87 @@
+---
+# tasks file for jenkins
+###########################################################
+- name: Create jenkins user
+  ansible.builtin.user:
+    name: jenkins
+    comment: jenkins User
+    shell: /sbin/nologin
+    system: yes
+
+- name: Create required directories
+  file:
+    path: '{{ item }}'
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: '0755'
+  with_items:
+    - '/server/jenkins'
+
+#######################################################################
+- name: Install Jenkins
+  become: yes
+  package:
+    name: jenkins.noarch
+    state: present
+
+- name: Check if Jenkins WAR file exists at the destination path
+  ansible.builtin.stat:
+    path: "{{ jenkins_install_dir }}/jenkins.war"
+  register: jenkins_war_stat
+  become: yes
+
+- name: Move Jenkins WAR file if it does not exist in the destination path
+  command: mv /usr/share/java/jenkins.war {{ jenkins_install_dir }}/jenkins.war
+  when: jenkins_war_stat.stat.exists == false
+  become: yes
+
+# - name: Download and Install Jenkins RPM
+#   hosts: your_target_host
+#   become: yes
+#   tasks:
+# - name: Download Jenkins RPM
+#   ansible.builtin.get_url:
+#     url: "https://archives.jenkins-ci.org/redhat-stable/jenkins-2.426.3-1.1.noarch.rpm"
+#     dest: "/server/jenkins"
+
+# - name: Install Jenkins RPM
+#   ansible.builtin.yum:
+#     name: "/server/jenkins"
+#     state: present
+
+
+- name: Create jenkins service file
+  ansible.builtin.template:
+    src: templates/jenkins-config.xml.j2
+    dest: /etc/systemd/system/jenkins.service
+  become: true
+
+- name: Set ownership and permissions for jenkins files
+  ansible.builtin.file:
+    path: /etc/systemd/system/jenkins.service
+    path: /server/jenkins
+    # path: /server/jenkins/conf/jenkins
+    owner: jenkins
+    group: jenkins
+    recurse: yes
+    mode: "0775"
+    # state: directory
+  become: true
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Ensure Jenkins service is enabled and running
+  become: yes
+  systemd:
+    name: jenkins
+    enabled: yes
+    state: started
+
+- name: Restart Jenkins
+  become: yes
+  systemd:
+    name: jenkins
+    state: restarted
